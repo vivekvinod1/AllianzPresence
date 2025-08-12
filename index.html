@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allianz Direct Presence World Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .country {
+            fill: #cccccc; /* Default country color */
+            stroke: #ffffff;
+            stroke-width: 0.5;
+            transition: fill 0.3s ease;
+        }
+        .present-europe {
+            fill: #F37321; /* EXL Orange */
+        }
+        .present-other {
+            fill: #4A5568; /* Dark Grey */
+        }
+        .country:hover {
+            fill: #0056b9; /* Lighter Allianz Blue for hover */
+            cursor: pointer;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: auto;
+            height: auto;
+            padding: 8px 12px;
+            font-size: 14px;
+            background: #2d3748;
+            color: #ffffff;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .map-container {
+            max-width: 1200px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-6 md:p-8">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="p-6 md:p-10">
+            <div class="flex items-center mb-6">
+                <svg class="w-12 h-12 text-[#003781]" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4ZM12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6Z"/>
+                </svg>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 ml-4">Allianz Global Presence</h1>
+            </div>
+            <p class="text-gray-600 mb-8">This infographic illustrates the countries where Allianz maintains a direct business presence. Hover over a highlighted country for its name.</p>
+            
+            <div class="flex flex-wrap items-center mb-6 gap-x-6 gap-y-2">
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full bg-[#F37321] mr-3"></div>
+                    <span class="text-gray-700 font-semibold">European Presence</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full bg-[#4A5568] mr-3"></div>
+                    <span class="text-gray-700 font-semibold">Other Global Presence</span>
+                </div>
+            </div>
+
+            <div class="map-container bg-white rounded-lg p-2">
+                <svg id="world-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+                    <!-- SVG path data for countries will be injected here by JavaScript -->
+                </svg>
+            </div>
+             <div class="tooltip" id="tooltip"></div>
+        </div>
+        <div class="bg-gray-50 px-6 py-4">
+            <p class="text-xs text-gray-500">Data compiled from publicly available information on Allianz's corporate websites. This map represents direct presence and may not include all partnerships or minority holdings.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // List of all countries with Allianz presence (using ISO 3166-1 alpha-3 codes)
+            const presentCountries = [
+                "ARG", "AUS", "AUT", "BHR", "BEL", "BMU", "BRA", "BGR", "CAN", "CHL", "CHN", "COL", "HRV", "CZE", 
+                "DNK", "EGY", "EST", "FIN", "FRA", "DEU", "GRC", "HKG", "HUN", "IND", "IDN", "IRL", "ISR", 
+                "ITA", "JPN", "KWT", "LVA", "LBN", "LIE", "LTU", "LUX", "MYS", "MEX", "MAR", "NLD", "NZL", 
+                "NOR", "OMN", "POL", "PRT", "QAT", "ROU", "SAU", "SGP", "SVK", "SVN", "ZAF", "KOR", "ESP", 
+                "LKA", "SWE", "CHE", "TWN", "THA", "TUN", "TUR", "UKR", "ARE", "GBR", "USA"
+            ];
+
+            // List of European countries from the presence list
+            const europeanCountries = [
+                "AUT", "BEL", "BGR", "HRV", "CZE", "DNK", "EST", "FIN", "FRA", "DEU", "GRC", "HUN", "IRL", 
+                "ITA", "LVA", "LIE", "LTU", "LUX", "NLD", "NOR", "POL", "PRT", "ROU", "SVK", "SVN", "ESP", 
+                "SWE", "CHE", "TUR", "UKR", "GBR"
+            ];
+
+            const tooltip = document.getElementById('tooltip');
+            const mapContainer = document.getElementById('world-map');
+
+            // Fetch SVG map data
+            fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+                .then(response => response.json())
+                .then(data => {
+                    const countries = topojson.feature(data, data.objects.countries).features;
+                    const pathGenerator = d3.geoPath(d3.geoMercator().scale(140).translate([480, 300]));
+                    
+                    const countryPaths = countries.map(country => {
+                        // We need to map the numeric id from the topojson to the 3-letter ISO code
+                        const countryIdMap = {
+                            "004": "AFG", "008": "ALB", "012": "DZA", "024": "AGO", "010": "ATA", "028": "ATG", "032": "ARG", "051": "ARM", "036": "AUS", "040": "AUT", "031": "AZE",
+                            "044": "BHS", "048": "BHR", "050": "BGD", "052": "BRB", "112": "BLR", "056": "BEL", "084": "BLZ", "204": "BEN", "060": "BMU", "064": "BTN", "068": "BOL",
+                            "070": "BIH", "072": "BWA", "076": "BRA", "092": "VGB", "096": "BRN", "100": "BGR", "854": "BFA", "108": "BDI", "116": "KHM", "120": "CMR", "124": "CAN",
+                            "132": "CPV", "140": "CAF", "148": "TCD", "152": "CHL", "156": "CHN", "170": "COL", "174": "COM", "178": "COG", "180": "COD", "188": "CRI", "384": "CIV",
+                            "191": "HRV", "192": "CUB", "196": "CYP", "203": "CZE", "208": "DNK", "262": "DJI", "212": "DMA", "214": "DOM", "218": "ECU", "818": "EGY", "222": "SLV",
+                            "226": "GNQ", "232": "ERI", "233": "EST", "231": "ETH", "238": "FLK", "242": "FJI", "246": "FIN", "250": "FRA", "254": "GUF", "258": "PYF", "260": "ATF",
+                            "266": "GAB", "270": "GMB", "268": "GEO", "276": "DEU", "288": "GHA", "292": "GIB", "300": "GRC", "304": "GRL", "308": "GRD", "320": "GTM", "324": "GIN",
+                            "624": "GNB", "328": "GUY", "332": "HTI", "336": "VAT", "340": "HND", "344": "HKG", "348": "HUN", "352": "ISL", "356": "IND", "360": "IDN", "364": "IRN",
+                            "368": "IRQ", "372": "IRL", "376": "ISR", "380": "ITA", "388": "JAM", "392": "JPN", "400": "JOR", "398": "KAZ", "404": "KEN", "296": "KIR", "408": "PRK",
+                            "410": "KOR", "414": "KWT", "417": "KGZ", "418": "LAO", "428": "LVA", "422": "LBN", "426": "LSO", "430": "LBR", "434": "LBY", "438": "LIE", "440": "LTU",
+                            "442": "LUX", "446": "MAC", "807": "MKD", "450": "MDG", "454": "MWI", "458": "MYS", "462": "MDV", "466": "MLI", "470": "MLT", "478": "MRT", "480": "MUS",
+                            "175": "MYT", "484": "MEX", "492": "MCO", "496": "MNG", "499": "MNE", "504": "MAR", "508": "MOZ", "104": "MMR", "516": "NAM", "524": "NPL", "528": "NLD",
+                            "530": "ANT", "540": "NCL", "554": "NZL", "558": "NIC", "562": "NER", "566": "NGA", "578": "NOR", "512": "OMN", "586": "PAK", "585": "PLW", "591": "PAN",
+                            "598": "PNG", "600": "PRY", "604": "PER", "608": "PHL", "616": "POL", "620": "PRT", "630": "PRI", "634": "QAT", "642": "ROU", "643": "RUS", "646": "RWA",
+                            "659": "KNA", "662": "LCA", "670": "VCT", "882": "WSM", "674": "SMR", "678": "STP", "682": "SAU", "686": "SEN", "688": "SRB", "690": "SYC", "694": "SLE",
+                            "702": "SGP", "703": "SVK", "705": "SVN", "090": "SLB", "706": "SOM", "710": "ZAF", "728": "SSD", "724": "ESP", "144": "LKA", "729": "SDN", "740": "SUR",
+                            "744": "SJM", "748": "SWZ", "752": "SWE", "756": "CHE", "760": "SYR", "158": "TWN", "762": "TJK", "834": "TZA", "764": "THA", "626": "TLS", "768": "TGO",
+                            "776": "TON", "780": "TTO", "788": "TUN", "792": "TUR", "795": "TKM", "798": "TUV", "800": "UGA", "804": "UKR", "784": "ARE", "826": "GBR", "840": "USA",
+                            "858": "URY", "860": "UZB", "548": "VUT", "862": "VEN", "704": "VNM", "887": "YEM", "894": "ZMB", "716": "ZWE", "248": "ALA", "831": "GGY", "833": "IMN",
+                            "832": "JEY", "652": "BLM", "663": "AIA", "535": "BES", "531": "CUW", "720": "SYR", "534": "SXM"
+                        };
+                        const isoCode = countryIdMap[country.id];
+                        
+                        let presenceClass = '';
+                        if (presentCountries.includes(isoCode)) {
+                            if (europeanCountries.includes(isoCode)) {
+                                presenceClass = 'present-europe';
+                            } else {
+                                presenceClass = 'present-other';
+                            }
+                        }
+
+                        return `<path d="${pathGenerator(country)}" class="country ${presenceClass}" data-name="${country.properties.name}" data-id="${isoCode}"></path>`;
+                    }).join('');
+
+                    mapContainer.innerHTML = countryPaths;
+
+                    // Add event listeners after paths are created
+                    document.querySelectorAll('.country').forEach(el => {
+                        el.addEventListener('mousemove', function(event) {
+                            const countryName = this.getAttribute('data-name');
+                            if (countryName && countryName !== 'Antarctica') {
+                                tooltip.style.opacity = '1';
+                                tooltip.style.left = (event.pageX + 15) + 'px';
+                                tooltip.style.top = (event.pageY - 30) + 'px';
+                                tooltip.innerHTML = countryName;
+                            }
+                        });
+
+                        el.addEventListener('mouseleave', function() {
+                            tooltip.style.opacity = '0';
+                        });
+                    });
+                })
+                .catch(error => console.error('Error loading map data:', error));
+        });
+    </script>
+    <!-- D3 and TopoJSON for map rendering -->
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+</body>
+</html>
